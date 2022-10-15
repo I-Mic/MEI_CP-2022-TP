@@ -2,7 +2,7 @@ CC = gcc
 BIN = bin/
 SRC = src/
 INCLUDES = include/
-EXEC = k_means
+EXEC = k_means -lm
 
 CFLAGS = 
 
