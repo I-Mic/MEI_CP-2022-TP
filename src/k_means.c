@@ -10,8 +10,9 @@ typedef struct point{
 } point;
 
 typedef struct cluster {
-	point p;
+	point centroide;
 	struct point points[N];
+	int used; //basicamente para sabermos quantos elementos estão no cluster
 } cluster;
 
 struct point points[N];
@@ -31,16 +32,27 @@ void atribuir_cluster(){
 		//possivel melhoria de performance aqui, usando uma variavel point enves
 		//de ir sempre ao array buscar o ponto.
 
-		float menor_distancia = distancia_euclidiana(points[i],clusters[0].p);
+		float menor_distancia = distancia_euclidiana(points[i],clusters[0].centroide);
 		for (int j = 1;j < K; j++){
-			float distancia = distancia_euclidiana(points[i],clusters[j].p);
+			float distancia = distancia_euclidiana(points[i],clusters[j].centroide);
 			if(distancia < menor_distancia){
 				menor_distancia = distancia;
 				cluster_mais_proximo = j;
 			}
 		}
 		points[i].cluster_atribuido = cluster_mais_proximo;
+		remover_ponto_cluster(cluster_mais_proximo,i);
+		adicionar_ponto_cluster(cluster_mais_proximo,points[i]);
 	}
+}
+
+void remover_ponto_cluster(int k, int ind) { 
+	//eu sei que isto é um bocado ineficiente mas para já fica assim só para testar e entretanto tentamos melhorar
+	for(int i = ind; i < clusters[k].used; i++) clusters[k].points[i] = clusters[k].points[i + 1];
+}
+
+void adicionar_ponto_cluster(int k, point p) { //fiz esta função só pq ficava uma coisa enorme na de atribuir
+	clusters[k].points[clusters[k].used++] = p;
 }
 
 point calcular_centroide(int k){
@@ -49,8 +61,8 @@ point calcular_centroide(int k){
 	point centroide;
 
 	for(int i=0; i<N; i++) {
-		sum_x += clusters[k].p.x;
-		sum_y += clusters[k].p.y;
+		sum_x += clusters[k].centroide.x;
+		sum_y += clusters[k].centroide.y;
 	}
 	centroide.x = sum_x/N;
 	centroide.y = sum_y/N;
@@ -63,26 +75,18 @@ void inicializa() {
 
 	srand(10);
 	for(int i = 0; i < N; i++) {
-		float x = (float) rand() / RAND_MAX;
-		float y = (float) rand() / RAND_MAX;
-		points[i].x = x;
-		points[i].y = y;
+		points[i].x = (float) rand() / RAND_MAX;
+		points[i].y = (float) rand() / RAND_MAX;;
 		}
 
 	for(int i = 0; i < K; i++) {
-		float x = points[i].x;
-		float y = points[i].y;
-		clusters[i].p.x = x;
-		clusters[i].p.y = y;
+		clusters[i].centroide.x =  points[i].x;
+		clusters[i].centroide.y = points[i].y;
+		clusters[i].used = 0;
 	}
+
 	atribuir_cluster();
 }
-
-
-
-
-
-
 
 void main(){
 
