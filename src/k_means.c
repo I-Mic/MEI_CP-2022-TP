@@ -1,6 +1,5 @@
 #include "../include/utils.h"
 
-
 #define N 10000000
 #define K 4
 
@@ -8,18 +7,23 @@ typedef struct point{
 	float x;
 	float y;
 	int cluster_atribuido;
-}point;
+} point;
+
+typedef struct cluster {
+	point p;
+	struct point points[N];
+} cluster;
 
 struct point points[N];
-struct point cluster[K];
+struct cluster clusters[K];
 
 
-//Funcao que calcula a distancia euclidiana entre dois pontos
+//Função que calcula a distância euclidiana entre dois pontos
 float distancia_euclidiana(point a, point b){
 	return sqrt(((a.x - b.x) * (a.x - b.x)) + ((a.y - b.y) * (a.y - b.y)));
 }
 
-//Funcao que atribui aos pontos o seu cluster mais proximo
+//Função que atribui aos pontos o seu cluster mais próximo
 void atribuir_cluster(){
 	for (int i=0; i < N; i++){
 		int cluster_mais_proximo = 0;
@@ -27,9 +31,9 @@ void atribuir_cluster(){
 		//possivel melhoria de performance aqui, usando uma variavel point enves
 		//de ir sempre ao array buscar o ponto.
 
-		float menor_distancia = distancia_euclidiana(points[i],cluster[0]);
+		float menor_distancia = distancia_euclidiana(points[i],clusters[0].p);
 		for (int j = 1;j < K; j++){
-			float distancia = distancia_euclidiana(points[i],cluster[j]);
+			float distancia = distancia_euclidiana(points[i],clusters[j].p);
 			if(distancia < menor_distancia){
 				menor_distancia = distancia;
 				cluster_mais_proximo = j;
@@ -39,7 +43,22 @@ void atribuir_cluster(){
 	}
 }
 
-//Cria os pontos aleatorios, clusters e atribui o cluster mais proximo a cada ponto
+point calcular_centroide(int k){
+	int sum_x = 0;
+	int sum_y = 0;
+	point centroide;
+
+	for(int i=0; i<N; i++) {
+		sum_x += clusters[k].p.x;
+		sum_y += clusters[k].p.y;
+	}
+	centroide.x = sum_x/N;
+	centroide.y = sum_y/N;
+
+	return centroide;
+}
+
+//Cria os pontos aleatórios, clusters e atribui o cluster mais próximo a cada ponto
 void inicializa() {
 
 	srand(10);
@@ -53,8 +72,8 @@ void inicializa() {
 	for(int i = 0; i < K; i++) {
 		float x = points[i].x;
 		float y = points[i].y;
-		cluster[i].x = x;
-		cluster[i].y = y;
+		clusters[i].p.x = x;
+		clusters[i].p.y = y;
 	}
 	atribuir_cluster();
 }
