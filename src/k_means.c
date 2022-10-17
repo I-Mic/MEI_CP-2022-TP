@@ -1,6 +1,6 @@
 #include "../include/utils.h"
 
-#define N 1000000
+#define N 10000000
 #define K 4
 
 typedef struct point{
@@ -91,8 +91,8 @@ int reatribuir_clusters() {
 
 			}
 			if(point_changed != 0){
+				adicionar_ponto_cluster(cluster_mais_proximo,clusters[i].points[j]);
 				remover_ponto_cluster(i,j); //i-cluster, j-posição no array de pontos do cluster
-				adicionar_ponto_cluster(cluster_mais_proximo,points[j]);
 				has_changed = 1;
 				//printf("I did smth %d\n",j);
 				
@@ -113,11 +113,10 @@ int reatribuir_clusters() {
 //Função que remove um ponto de um determinado cluster
 void remover_ponto_cluster(int k, int ind) { 
 	//eu sei que isto é um bocado ineficiente mas para já fica assim só para testar e entretanto tentamos melhorar
-	for(int i = ind; i < clusters[k].used-1; i++) clusters[k].points[i] = clusters[k].points[i + 1];
+	/*for(int i = ind; i < clusters[k].used-1; i++) clusters[k].points[i] = clusters[k].points[i + 1];
 	clusters[k].used--;
-	
-	/*clusters[k].points[ind] = clusters[k].points[clusters[k].used];
-	clusters[k].used--;*/
+	*/
+	clusters[k].points[ind] = clusters[k].points[clusters[k].used--];
 }
 
 //Função que adiciona um ponto a um determinado cluster
