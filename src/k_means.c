@@ -98,9 +98,9 @@ int reatribuir_clusters() {
 				clusters[k].centroide = calcular_centroide(k);
 				clusters[cluster_mais_proximo].centroide = calcular_centroide(cluster_mais_proximo);
 				has_changed = 1;
-				printf("I did smth %d\n",test++);
+				//printf("I did smth %d\n",test++);
 				
-				//j--;
+				j--;
 			}
 		}
 		
