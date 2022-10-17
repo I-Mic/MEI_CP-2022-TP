@@ -70,6 +70,7 @@ void atribuir_cluster_inicial(){
 int reatribuir_clusters() {
 	int has_changed = 0,test =0;
 	//guardar_estado_clusters(); //guarda o estado dos clusters antes de estes serem alterados
+
 	for (int i=0; i<K; i++) { //para cada cluster
 
 		for (int j=0; j<clusters[i].used; j++) { //para cada ponto do cluster
@@ -95,7 +96,6 @@ int reatribuir_clusters() {
 				remover_ponto_cluster(i,j); //i-cluster, j-posição no array de pontos do cluster
 				has_changed = 1;
 				//printf("I did smth %d\n",j);
-				
 				j--;
 			}
 		}
@@ -149,11 +149,6 @@ void inicializa() {
 		clusters[i].centroide.y = points[i].y;
 		clusters[i].used = 0;
 	}
-	/*for(int i = 0; i < K; i++) {
-		clusters[i].centroide.x = 0;
-		clusters[i].centroide.y = 0;
-		clusters[i].used = 0;
-	}*/
 
 	atribuir_cluster_inicial();
 }
@@ -180,19 +175,17 @@ int has_converged() {
 */
 //Função principal que aplica o algoritmo de Lloyd
 void k_means_lloyd_algorithm() {
-	int iteracoes = 0;
-	int mudou = 1;
+	int iteracoes = 1;
 
 	inicializa();
 	printf("N = %d, K = %d\n",N,K);
 
-	while(mudou != 0) {
-		mudou = reatribuir_clusters();
-		//printf("Iterated %d\n",iteracoes);
+	while(reatribuir_clusters()) {
+		for(int k=0; k < K;k++){
 		iteracoes++;
 	}
 	for(int k=0; k < K;k++){
-		printf("Center: (%f, %f) : Size: %d\n",clusters[k].centroide.x,clusters[k].centroide.y,clusters[k].used);
+		printf("Center: (%0.3f, %0.3f) : Size: %d\n",clusters[k].centroide.x,clusters[k].centroide.y,clusters[k].used);
 	}
 	printf("Iterations:%d\n",iteracoes);
 }
@@ -207,6 +200,7 @@ void main(){
 	clock_t end = clock();
 	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 	printf("Exec time: %f secs\n",time_spent);
+	return;
 	/*
 	//Debugging parece estar a atribuir os clusters corretamente
 	for (int i=0;i<K;i++){
