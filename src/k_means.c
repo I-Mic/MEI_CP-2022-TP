@@ -1,6 +1,6 @@
 #include "../include/utils.h"
 
-#define N 1000000
+#define N 10000000
 #define K 4
 
 typedef struct point{
@@ -95,8 +95,8 @@ int reatribuir_clusters() {
 			if(point_changed != 0){
 				remover_ponto_cluster(i,j); //i-cluster, j-posição no array de pontos do cluster
 				adicionar_ponto_cluster(cluster_mais_proximo,points[j]);
-				clusters[i].centroide = calcular_centroide(i);
-				clusters[cluster_mais_proximo].centroide = calcular_centroide(cluster_mais_proximo);
+				//clusters[i].centroide = calcular_centroide(i);
+				//clusters[cluster_mais_proximo].centroide = calcular_centroide(cluster_mais_proximo);
 				has_changed = 1;
 				//printf("I did smth %d\n",test++);
 				
@@ -104,6 +104,11 @@ int reatribuir_clusters() {
 			}
 		}
 		
+	}
+	if(has_changed != 0){
+		for (int i=0; i<K;i++){
+			clusters[i].centroide = calcular_centroide(i);
+		}
 	}
 	//Assim sabemos sempre se esta funcao fez alguma alteracao aos clusters
 	return has_changed;
@@ -200,7 +205,14 @@ void k_means_lloyd_algorithm() {
 
 void main(){
 
+	clock_t begin = clock();
+
 	k_means_lloyd_algorithm();
+
+
+	clock_t end = clock();
+	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("Exec time: %f secs\n",time_spent);
 	/*
 	//Debugging parece estar a atribuir os clusters corretamente
 	for (int i=0;i<K;i++){
