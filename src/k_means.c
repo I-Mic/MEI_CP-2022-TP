@@ -1,12 +1,11 @@
 #include "../include/utils.h"
 
-#define N 10000
+#define N 10000000
 #define K 4
 
 typedef struct point{
 	float x;
 	float y;
-	int cluster_atribuido;
 } point;
 
 typedef struct cluster {
@@ -58,7 +57,6 @@ void atribuir_cluster_inicial(){
 				cluster_mais_proximo = j;
 			}
 		}
-		points[i].cluster_atribuido = cluster_mais_proximo;
 		adicionar_ponto_cluster(cluster_mais_proximo,points[i]);
 	}
 	for (int k=0;k<K;k++){
