@@ -191,7 +191,7 @@ void k_means_lloyd_algorithm() {
 
 	while(mudou != 0) {
 		mudou = reatribuir_clusters();
-		printf("Iterated %d\n",iteracoes);
+		//printf("Iterated %d\n",iteracoes);
 		iteracoes++;
 	}
 	for(int k=0; k < K;k++){
