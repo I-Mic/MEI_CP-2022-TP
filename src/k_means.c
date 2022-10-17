@@ -21,6 +21,22 @@ struct cluster clusters[K];
 struct cluster last_clusters[K]; //variável que irá guardar o último estado dos clusters
 
 
+//Função que calcula o centroide de um cluster
+point calcular_centroide(int k){
+	float sum_x = 0;
+	float sum_y = 0;
+	point centroide;
+
+	for(int i=0; i<clusters[k].used; i++) {
+		sum_x += clusters[k].points[i].x;
+		sum_y += clusters[k].points[i].y;
+	}
+	centroide.x = sum_x/clusters[k].used;
+	centroide.y = sum_y/clusters[k].used;
+
+	return centroide;
+}
+
 //Função que calcula a distância euclidiana entre dois pontos
 float distancia_euclidiana(point a, point b){
 	return sqrt(((a.x - b.x) * (a.x - b.x)) + ((a.y - b.y) * (a.y - b.y)));
@@ -30,12 +46,12 @@ float distancia_euclidiana(point a, point b){
 void atribuir_cluster_inicial(){
 	for (int i=0; i < N; i++){
 		int cluster_mais_proximo = 0;
-
 		//possivel melhoria de performance aqui, usando uma variavel point em vez
 		//de ir sempre ao array buscar o ponto.
 
 		float menor_distancia = distancia_euclidiana(points[i],clusters[0].centroide);
 		for (int j = 1; j < K; j++){
+			
 			float distancia = distancia_euclidiana(points[i],clusters[j].centroide);
 			if(distancia < menor_distancia){
 				menor_distancia = distancia;
@@ -44,37 +60,58 @@ void atribuir_cluster_inicial(){
 		}
 		points[i].cluster_atribuido = cluster_mais_proximo;
 		adicionar_ponto_cluster(cluster_mais_proximo,points[i]);
-		calcular_centroide(cluster_mais_proximo);
+	}
+	for (int k=0;k<K;k++){
+		clusters[k].centroide = calcular_centroide(k);
 	}
 }
 
 //Provavelmente dá para juntar esta função com a de cima de alguma maneira pq são bastante parecidas
 //Função que percorre todos os pontos de todos os clusters e lhes atribiu (ou não) um novo cluster
-void reatribuir_clusters() {
-	guardar_estado_clusters(); //guarda o estado dos clusters antes de estes serem alterados
+//Se reatribuir os pontos entao devolve 1, senao devolve 0
+int reatribuir_clusters() {
+	int has_changed = 0;
+	//guardar_estado_clusters(); //guarda o estado dos clusters antes de estes serem alterados
 	for (int i=0; i<K; i++) { //para cada cluster
-		for (int j=0; j<clusters[i].used; j++) { //para cada ponto do cluster
-			int cluster_mais_proximo = 0;
 
+		for (int j=0; j<clusters[i].used; j++) { //para cada ponto do cluster
+			int point_changed = 0;
+			int cluster_mais_proximo = j;
 			float menor_distancia = distancia_euclidiana(clusters[i].points[j],clusters[i].centroide);
+			//printf("%d ",j);
 			for (int k = 0; k < K; k++){
-				float distancia = distancia_euclidiana(clusters[i].points[j],clusters[k].centroide);
-				if(distancia < menor_distancia){
-					menor_distancia = distancia;
-					cluster_mais_proximo = j;
+				//para evitar fazer isto caso seja o mesmo cluster
+				if(k != i){
+					float distancia = distancia_euclidiana(clusters[i].points[j],clusters[k].centroide);
+					
+					if(distancia < menor_distancia){
+						menor_distancia = distancia;
+						cluster_mais_proximo = k;
+						point_changed ++;
+					}
 				}
+
 			}
-			remover_ponto_cluster(i,j); //i-cluster, j-posição no array de pontos do cluster
-			adicionar_ponto_cluster(cluster_mais_proximo,points[j]);
-			calcular_centroide(cluster_mais_proximo);
+			if(point_changed != 0){
+				remover_ponto_cluster(i,j); //i-cluster, j-posição no array de pontos do cluster
+				adicionar_ponto_cluster(cluster_mais_proximo,points[j]);
+				clusters[cluster_mais_proximo].centroide = calcular_centroide(cluster_mais_proximo);
+				has_changed = 1;
+				
+				j--;
+			}
 		}
+		
 	}
+	//Assim sabemos sempre se esta funcao fez alguma alteracao aos clusters
+	return has_changed;
 }
 
 //Função que remove um ponto de um determinado cluster
 void remover_ponto_cluster(int k, int ind) { 
 	//eu sei que isto é um bocado ineficiente mas para já fica assim só para testar e entretanto tentamos melhorar
-	for(int i = ind; i < clusters[k].used; i++) clusters[k].points[i] = clusters[k].points[i + 1];
+	for(int i = ind; i < clusters[k].used-1; i++) clusters[k].points[i] = clusters[k].points[i + 1];
+	clusters[k].used--;
 }
 
 //Função que adiciona um ponto a um determinado cluster
@@ -82,6 +119,7 @@ void adicionar_ponto_cluster(int k, point p) { //fiz esta função só pq ficava
 	clusters[k].points[clusters[k].used++] = p;
 }
 
+/*
 //Função que guarda o estado de um cluster
 void guardar_estado_clusters() {
 	for(int i = 0; i < K; i++) {
@@ -92,22 +130,8 @@ void guardar_estado_clusters() {
 		}
 	}
 }
+*/
 
-//Função que calcula o centroide de um cluster
-point calcular_centroide(int k){
-	int sum_x = 0;
-	int sum_y = 0;
-	point centroide;
-
-	for(int i=0; i<N; i++) {
-		sum_x += clusters[k].centroide.x;
-		sum_y += clusters[k].centroide.y;
-	}
-	centroide.x = sum_x/N;
-	centroide.y = sum_y/N;
-
-	return centroide;
-}
 
 //Cria os pontos aleatórios, clusters e atribui o cluster mais próximo a cada ponto
 void inicializa() {
@@ -124,15 +148,15 @@ void inicializa() {
 		clusters[i].used = 0;
 	}
 
-	for(int i = 0; i < K; i++) {
+	/*for(int i = 0; i < K; i++) {
 		clusters[i].centroide.x = 0;
 		clusters[i].centroide.y = 0;
 		clusters[i].used = 0;
-	}
+	}*/
 
 	atribuir_cluster_inicial();
 }
-
+/*
 //Função que verifica se o algoritmo já convergiu
 int has_converged() {
 	//basicamente a ideia será guardar o estado dos clusters antes de passar para a próxima iteração
@@ -152,20 +176,28 @@ int has_converged() {
 	
 	return 1;
 }
-
+*/
 //Função principal que aplica o algoritmo de Lloyd
 void k_means_lloyd_algorithm() {
+	int iteracoes = 0;
+	int mudou = 1;
 
 	inicializa();
-	while(!has_converged()) {
-		reatribuir_clusters();
+	printf("N = %d, K = %d\n",N,K);
+
+	while(mudou != 0) {
+		mudou = reatribuir_clusters();
+		iteracoes++;
 	}
+	for(int k=0; k < K;k++){
+		printf("Center: (%f, %f) : Size: %d\n",clusters[k].centroide.x,clusters[k].centroide.y,clusters[k].used);
+	}
+	printf("Iterations:%d\n",iteracoes);
 }
 
 void main(){
 
 	k_means_lloyd_algorithm();
-
 	/*
 	//Debugging parece estar a atribuir os clusters corretamente
 	for (int i=0;i<K;i++){
