@@ -95,10 +95,10 @@ int reatribuir_clusters() {
 			if(point_changed != 0){
 				remover_ponto_cluster(i,j); //i-cluster, j-posição no array de pontos do cluster
 				adicionar_ponto_cluster(cluster_mais_proximo,points[j]);
-				clusters[k].centroide = calcular_centroide(k);
+				clusters[i].centroide = calcular_centroide(i);
 				clusters[cluster_mais_proximo].centroide = calcular_centroide(cluster_mais_proximo);
 				has_changed = 1;
-				//printf("I did smth %d\n",test++);
+				printf("I did smth %d\n",test++);
 				
 				j--;
 			}
