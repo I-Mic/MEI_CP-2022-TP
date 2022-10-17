@@ -1,6 +1,6 @@
 #include "../include/utils.h"
 
-#define N 10000000
+#define N 10000
 #define K 4
 
 typedef struct point{
@@ -146,15 +146,14 @@ void inicializa() {
 	srand(10);
 	for(int i = 0; i < N; i++) {
 		points[i].x = (float) rand() / RAND_MAX;
-		points[i].y = (float) rand() / RAND_MAX;;
+		points[i].y = (float) rand() / RAND_MAX;
 		}
 
 	for(int i = 0; i < K; i++) {
 		clusters[i].centroide.x =  points[i].x;
 		clusters[i].centroide.y = points[i].y;
-		clusters[i].used = 0;
+		adicionar_ponto_cluster(i,clusters[i].centroide);
 	}
-
 	/*for(int i = 0; i < K; i++) {
 		clusters[i].centroide.x = 0;
 		clusters[i].centroide.y = 0;
