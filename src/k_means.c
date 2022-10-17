@@ -112,11 +112,8 @@ int reatribuir_clusters() {
 
 //Função que remove um ponto de um determinado cluster
 void remover_ponto_cluster(int k, int ind) { 
-	//eu sei que isto é um bocado ineficiente mas para já fica assim só para testar e entretanto tentamos melhorar
-	/*for(int i = ind; i < clusters[k].used-1; i++) clusters[k].points[i] = clusters[k].points[i + 1];
+	clusters[k].points[ind] = clusters[k].points[clusters[k].used-1];
 	clusters[k].used--;
-	*/
-	clusters[k].points[ind] = clusters[k].points[clusters[k].used--];
 }
 
 //Função que adiciona um ponto a um determinado cluster
