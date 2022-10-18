@@ -4,7 +4,7 @@ SRC = src/
 INCLUDES = include/
 EXEC = k_means -lm
 
-CFLAGS = -O2
+CFLAGS = -ftree-vectorize -O2 -msse4 
 
 .DEFAULT_GOAL = k_means
 
