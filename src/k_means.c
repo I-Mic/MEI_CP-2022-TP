@@ -10,14 +10,15 @@ typedef struct point{
 
 typedef struct cluster {
 	point centroide;
-	struct point points[N];
+	struct point *points;
 	int used; //basicamente para sabermos quantos elementos estão no cluster
 } cluster;
 
 
-struct point points[N];
+struct point *points;
 struct cluster clusters[K];
 struct point centroides_antigos[K];
+
 
 
 //Função que calcula o centroide de um cluster
@@ -117,6 +118,8 @@ int reatribuir_clusters() {
 
 //Cria os pontos aleatórios, clusters e atribui o cluster mais próximo a cada ponto
 void inicializa() {
+	points = (struct point *)malloc(N*sizeof(struct point));
+	for(int i= 0;i<K;i++) clusters[i].points = (struct point *)malloc(N*sizeof(struct point));
 
 	srand(10);
 	for(int i = 0; i < N; i++) {
@@ -153,7 +156,6 @@ void k_means_lloyd_algorithm() {
 }
 
 int main(){
-
 	clock_t begin = clock();
 
 	k_means_lloyd_algorithm();
