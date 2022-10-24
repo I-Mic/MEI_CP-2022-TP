@@ -4,7 +4,8 @@ SRC = src/
 INCLUDES = include/
 EXEC = k_means -lm
 
-CFLAGS = -ftree-vectorize -O2 -msse4 
+#CFLAGS = -funroll-loops -O2
+CFLAGS = -ftree-vectorize -msse4 -O2
 
 .DEFAULT_GOAL = k_means
 

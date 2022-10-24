@@ -12,13 +12,15 @@ typedef struct cluster {
 	point centroide;
 	struct point *points;
 	int used; //basicamente para sabermos quantos elementos estão no cluster
+	int max; //número máximo de elementos
 } cluster;
 
 
-struct point *points;
+struct point points[N];
 struct cluster clusters[K];
 struct point centroides_antigos[K];
 
+int iteracoes;
 
 
 //Função que calcula o centroide de um cluster
@@ -45,81 +47,63 @@ float distancia_euclidiana(point a, point b){
 
 //Compara os centroides antigos com os novos, se forem diferentes devolve 0 senao devolve 1
 int comparar_centroides(){
-	for(int i=0;i<K;i++){
+	for(int i = 0; i < K; i++){
 		if(clusters[i].centroide.x != centroides_antigos[i].x || clusters[i].centroide.y != centroides_antigos[i].y) return 0;
 	}
 	return 1;
 }
 
 void reset_clusters(){
-	for (int i=0; i<K;i++){
+	for (int i = 0; i < K; i++){
 		centroides_antigos[i] = clusters[i].centroide; 
 		clusters[i].used = 0;
 	}
 }
 
 //Função que adiciona um ponto a um determinado cluster
-void adicionar_ponto_cluster(int k, point p) { //fiz esta função só pq ficava uma coisa enorme na de atribuir
-	clusters[k].points[clusters[k].used] = p;
-	clusters[k].used++;
+void adicionar_ponto_cluster(int k, point p) {
+	/*if (clusters[k].used >= clusters[k].max) {
+		clusters[k].points = (struct point*) realloc(clusters[k].points, clusters[k].max * 2 * sizeof(struct point)); //se estiver cheio duplicamos o tamanho
+		clusters[k].max *= 2;
+	}
+	*/
+	clusters[k].points[clusters[k].used++] = p;
 }
-
 
 //Função que atruibui cada ponto ao seu cluster mais próximo
-void atribuir_cluster_inicial(){
-	for (int i=0; i < N; i++){
-		int cluster_mais_proximo = 0;
-		float menor_distancia = distancia_euclidiana(points[i],clusters[0].centroide);
-
-		for (int j = 1; j < K; j++){
-			float distancia = distancia_euclidiana(points[i],clusters[j].centroide);
-
-			if(distancia < menor_distancia){
-				menor_distancia = distancia;
-				cluster_mais_proximo = j;
-			}
-		}
-		adicionar_ponto_cluster(cluster_mais_proximo,points[i]);
-	}
-	for (int k=0;k<K;k++){
-		clusters[k].centroide = calcular_centroide(k);
-	}
-}
-
-//Provavelmente dá para juntar esta função com a de cima de alguma maneira pq são bastante parecidas
-//Função que percorre todos os pontos de todos os clusters e lhes atribiu (ou não) um novo cluster
 //Se reatribuir os pontos entao devolve 0, senao devolve 1
-int reatribuir_clusters() {
+int atribuir_clusters() {
+	int cluster_mais_proximo;
+	float menor_distancia, distancia;
+	point cent = clusters[0].centroide, p;
+
 	reset_clusters();
-	int has_changed = 0;
 
-	for (int i = 0;i<N;i++){
-		int cluster_mais_proximo = 0;
+	for (int i = 0; i < N; i++){
+		p = points[i];
+		cluster_mais_proximo = 0;
 
-		float menor_distancia = distancia_euclidiana(points[i],clusters[0].centroide);
+		menor_distancia = distancia_euclidiana(p,cent);
 
 		for (int j = 1; j < K; j++){
 			
-			float distancia = distancia_euclidiana(points[i],clusters[j].centroide);
+			distancia = distancia_euclidiana(p,clusters[j].centroide);
 
-			if(distancia < menor_distancia){
-				menor_distancia = distancia;
-				cluster_mais_proximo = j;
-			}
+			cluster_mais_proximo = (distancia < menor_distancia) ? j : cluster_mais_proximo;
+			menor_distancia = (distancia < menor_distancia) ? distancia : menor_distancia;
+
 		}
-		adicionar_ponto_cluster(cluster_mais_proximo,points[i]);
+		adicionar_ponto_cluster(cluster_mais_proximo,p);
 	}
-	for (int k=0;k<K;k++){
+	for (int k = 0; k < K; k++){
 		clusters[k].centroide = calcular_centroide(k);
 	}
-	return comparar_centroides();
+	return (iteracoes == 0) ? 0 : comparar_centroides();
 }
 
 
 //Cria os pontos aleatórios, clusters e atribui o cluster mais próximo a cada ponto
 void inicializa() {
-	points = (struct point *)malloc(N*sizeof(struct point));
-	for(int i= 0;i<K;i++) clusters[i].points = (struct point *)malloc(N*sizeof(struct point));
 
 	srand(10);
 	for(int i = 0; i < N; i++) {
@@ -128,28 +112,29 @@ void inicializa() {
 		}
 
 	for(int i = 0; i < K; i++) {
-		clusters[i].centroide.x =  points[i].x;
+		clusters[i].centroide.x = points[i].x;
 		clusters[i].centroide.y = points[i].y;
 		clusters[i].used = 0;
+		clusters[i].max = (int) N/K;
+		clusters[i].points = (struct point*) malloc(N * sizeof(struct point));
+		//clusters[i].points = (struct point*) malloc(clusters[i].max * sizeof(struct point));
 	}
-
-	atribuir_cluster_inicial();
-	printf("\n");
 }
 
 
 //Função principal que aplica o algoritmo de Lloyd
 void k_means_lloyd_algorithm() {
-	int iteracoes = 1;
+	iteracoes = 0;
 
 	inicializa();
-	printf("N = %d, K = %d\n",N,K);
 
-	while(!reatribuir_clusters()) {
+	while(!atribuir_clusters()) {
 		iteracoes++;
 	}
 
-	for(int k=0; k < K;k++){
+	printf("N = %d, K = %d\n",N,K);
+
+	for(int k = 0; k < K; k++){
 		printf("Center: (%0.3f, %0.3f) : Size: %d\n",clusters[k].centroide.x,clusters[k].centroide.y,clusters[k].used);
 	}
 	printf("Iterations:%d\n",iteracoes);
