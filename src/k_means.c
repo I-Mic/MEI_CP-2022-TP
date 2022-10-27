@@ -91,8 +91,14 @@ int atribuir_clusters() {
 			
 			distancia = distancia_euclidiana(p,clusters[j].centroide);
 
+			if(distancia < menor_distancia){
+				cluster_mais_proximo = j;
+				menor_distancia = distancia;
+			}
+			/*Tentativa de tornar o codigo mais vetorizavel
 			cluster_mais_proximo = (distancia < menor_distancia) ? j : cluster_mais_proximo;
 			menor_distancia = (distancia < menor_distancia) ? distancia : menor_distancia;
+			*/
 
 		}
 		adicionar_ponto_cluster(cluster_mais_proximo,p);
