@@ -19,4 +19,4 @@ clean:
 	rm -r bin/*
 
 run:
-	./$(BIN)$(EXEC)
+	time ./$(BIN)$(EXEC)

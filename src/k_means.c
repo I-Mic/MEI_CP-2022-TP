@@ -12,7 +12,7 @@ typedef struct cluster {
 	point centroide;
 	struct point *points;
 	int used; //basicamente para sabermos quantos elementos estão no cluster
-	int max; //número máximo de elementos
+	//int max; //número máximo de elementos
 } cluster;
 
 
@@ -41,7 +41,9 @@ point calcular_centroide(int k){
 
 //Função que calcula a distância euclidiana entre dois pontos
 float distancia_euclidiana(point a, point b){
-	return sqrt(((a.x - b.x) * (a.x - b.x)) + ((a.y - b.y) * (a.y - b.y)));
+	//Nao é necesário fazer raiz quadrada, pois as distancias sao apenas para efeitos de comparacao
+	//Assim reduzimos o tempo de execucao ao fazer menos uma calculacao
+	return ((a.x - b.x) * (a.x - b.x)) + ((a.y - b.y) * (a.y - b.y));
 }
 
 
@@ -115,7 +117,7 @@ void inicializa() {
 		clusters[i].centroide.x = points[i].x;
 		clusters[i].centroide.y = points[i].y;
 		clusters[i].used = 0;
-		clusters[i].max = (int) N/K;
+		//clusters[i].max = (int) N/K;
 		clusters[i].points = (struct point*) malloc(N * sizeof(struct point));
 		//clusters[i].points = (struct point*) malloc(clusters[i].max * sizeof(struct point));
 	}
@@ -141,14 +143,8 @@ void k_means_lloyd_algorithm() {
 }
 
 int main(){
-	clock_t begin = clock();
 
 	k_means_lloyd_algorithm();
-
-
-	clock_t end = clock();
-	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-	printf("Exec time: %f secs\n",time_spent);
 	return 0;
 
 }
