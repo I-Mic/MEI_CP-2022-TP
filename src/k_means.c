@@ -11,8 +11,7 @@ typedef struct point{
 typedef struct cluster {
 	point centroide;
 	struct point *points;
-	int used; //basicamente para sabermos quantos elementos estão no cluster
-	//int max; //número máximo de elementos
+	int used; //número de elementos no cluster
 } cluster;
 
 
@@ -41,13 +40,11 @@ point calcular_centroide(int k){
 
 //Função que calcula a distância euclidiana entre dois pontos
 float distancia_euclidiana(point a, point b){
-	//Nao é necesário fazer raiz quadrada, pois as distancias sao apenas para efeitos de comparacao
-	//Assim reduzimos o tempo de execucao ao fazer menos uma calculacao
 	return ((a.x - b.x) * (a.x - b.x)) + ((a.y - b.y) * (a.y - b.y));
 }
 
 
-//Compara os centroides antigos com os novos, se forem diferentes devolve 0 senao devolve 1
+//Compara os centroides antigos com os novos, se forem diferentes devolve 0 senão devolve 1
 int comparar_centroides(){
 	for(int i = 0; i < K; i++){
 		if(clusters[i].centroide.x != centroides_antigos[i].x || clusters[i].centroide.y != centroides_antigos[i].y) return 0;
@@ -55,6 +52,7 @@ int comparar_centroides(){
 	return 1;
 }
 
+//Função que guarda os clusters antigos e reinicia a contagem de elementos
 void reset_clusters(){
 	for (int i = 0; i < K; i++){
 		centroides_antigos[i] = clusters[i].centroide; 
@@ -64,16 +62,11 @@ void reset_clusters(){
 
 //Função que adiciona um ponto a um determinado cluster
 void adicionar_ponto_cluster(int k, point p) {
-	/*if (clusters[k].used >= clusters[k].max) {
-		clusters[k].points = (struct point*) realloc(clusters[k].points, clusters[k].max * 2 * sizeof(struct point)); //se estiver cheio duplicamos o tamanho
-		clusters[k].max *= 2;
-	}
-	*/
 	clusters[k].points[clusters[k].used++] = p;
 }
 
 //Função que atruibui cada ponto ao seu cluster mais próximo
-//Se reatribuir os pontos entao devolve 0, senao devolve 1
+//Se reatribuir os pontos então devolve 0, senão devolve 1
 int atribuir_clusters() {
 	int cluster_mais_proximo;
 	float menor_distancia, distancia;
@@ -95,7 +88,7 @@ int atribuir_clusters() {
 				cluster_mais_proximo = j;
 				menor_distancia = distancia;
 			}
-			/*Tentativa de tornar o codigo mais vetorizavel
+			/*Tentativa de tornar o código mais vetorizável
 			cluster_mais_proximo = (distancia < menor_distancia) ? j : cluster_mais_proximo;
 			menor_distancia = (distancia < menor_distancia) ? distancia : menor_distancia;
 			*/
@@ -110,7 +103,7 @@ int atribuir_clusters() {
 }
 
 
-//Cria os pontos aleatórios, clusters e atribui o cluster mais próximo a cada ponto
+//Função que preenche um array com pontos aleatórios e inicia os clusters
 void inicializa() {
 
 	srand(10);
@@ -123,9 +116,7 @@ void inicializa() {
 		clusters[i].centroide.x = points[i].x;
 		clusters[i].centroide.y = points[i].y;
 		clusters[i].used = 0;
-		//clusters[i].max = (int) N/K;
 		clusters[i].points = (struct point*) malloc(N * sizeof(struct point));
-		//clusters[i].points = (struct point*) malloc(clusters[i].max * sizeof(struct point));
 	}
 }
 
