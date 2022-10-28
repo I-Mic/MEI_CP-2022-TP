@@ -43,6 +43,7 @@ float distancia_euclidiana(point a, point b){
 	return ((a.x - b.x) * (a.x - b.x)) + ((a.y - b.y) * (a.y - b.y));
 }
 
+
 //Compares the old centroid with the new one to check if it has changed
 //If it has changed returns 0 otherwise returns 1
 int comparar_centroides(){
