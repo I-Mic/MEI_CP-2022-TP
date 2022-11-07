@@ -66,46 +66,12 @@ void adicionar_ponto_cluster(int k, point p) {
 	clusters[k].points[clusters[k].used++] = p;
 }
 
-//Function that designates a point to the closest cluster
-//If any cluster changed at the end returns 1, otherwise returns 0.
-/*int atribuir_clusters() {
-	int cluster_mais_proximo;
-	float menor_distancia, distancia;
-	point cent = clusters[0].centroide, p;
-
-	for (int i = 0; i < N; i++){
-		p = points[i];
-		cluster_mais_proximo = 0;
-
-		menor_distancia = distancia_euclidiana(p,cent);
-
-		for (int j = 1; j < K; j++){
-			
-			distancia = distancia_euclidiana(p,clusters[j].centroide);
-
-			if(distancia < menor_distancia){
-				cluster_mais_proximo = j;
-				menor_distancia = distancia;
-			}
-			/*Attempt at vectorizing the code
-			cluster_mais_proximo = (distancia < menor_distancia) ? j : cluster_mais_proximo;
-			menor_distancia = (distancia < menor_distancia) ? distancia : menor_distancia;
-			
-
-		}
-		adicionar_ponto_cluster(cluster_mais_proximo,p);
-	}
-	for (int k = 0; k < K; k++){
-		clusters[k].centroide = calcular_centroide(k);
-	}
-	return comparar_centroides();
-}*/
 
 //Function that designates a point to the closest cluster with paralelism
 //If any cluster changed at the end returns 1, otherwise returns 0.
 int atribuir_clusters() {
 	
-	#pragma omp for
+	#pragma omp parallel for
 	for (int i = 0; i < N; i++){
 		int cluster_mais_proximo = 0;
 		float distancia;
@@ -127,16 +93,16 @@ int atribuir_clusters() {
 			cluster_mais_proximo = (distancia < menor_distancia) ? j : cluster_mais_proximo;
 			menor_distancia = (distancia < menor_distancia) ? distancia : menor_distancia;
 			*/
-
 		}
 		//Critical zone 
 		#pragma omp critical
 		{
 			adicionar_ponto_cluster(cluster_mais_proximo,p);
-		}	
+		}
+			
 	}
 
-	#pragma omp for
+	#pragma omp parallel for
 	//Added paralelism
 	for (int k = 0; k < K; k++){
 		clusters[k].centroide = calcular_centroide(k);
