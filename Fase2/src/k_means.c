@@ -71,27 +71,21 @@ void adicionar_ponto_cluster(int k, point p) {
 //If any cluster changed at the end returns 1, otherwise returns 0.
 int atribuir_clusters() {
 
-	//Paralelismo aqui tem pessima performance e nao da os resultados desejados
-	#pragma omp for schedule(static)
+	#pragma omp reduced parallel for schedule(static)
 	for (int i = 0; i < N; i++){
 		int cluster_mais_proximo = 0;
 		point cent = clusters[0].centroide, p = points[i];
 
 		float menor_distancia = distancia_euclidiana(p,cent);
 
-		//Paralelismo aqui da os resultados desejados mas a performance é muito má
-		#pragma omp reduced(menor_distancia, cluster_mais_proximo) parallel for 
 		for (int j = 1; j < K; j++){
 			float distancia = distancia_euclidiana(p,clusters[j].centroide);
 
 			if(distancia < menor_distancia){
-				#pragma omp critical
 				cluster_mais_proximo = j;
 				menor_distancia = distancia;
 			}			
 		}
-		//Critical zone apenas necessario se for utilizado paralelismo no outer for loop
-		#pragma omp critical
 		adicionar_ponto_cluster(cluster_mais_proximo,p);
 	}
 
