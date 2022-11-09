@@ -174,6 +174,14 @@ void k_means_lloyd_algorithm() {
 	printf("Iterations:%d\n",iteracoes);
 }
 
+//Clears memory allocated for the arrays
+void freeMemory(){
+		free(thread_clusters);
+		free(points);
+		free(clusters);
+		free(centroides_antigos);
+}
+
 int main(int argc, char *argv[]){
 	N = atoi(argv[1]);
 	K = atoi(argv[2]);
@@ -189,5 +197,8 @@ int main(int argc, char *argv[]){
 	}
 
 	k_means_lloyd_algorithm();
+
+	freeMemory();
+
 	return 0;
 }
