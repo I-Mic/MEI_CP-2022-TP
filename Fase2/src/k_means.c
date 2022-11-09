@@ -71,7 +71,7 @@ void adicionar_ponto_cluster(int k, point p) {
 //If any cluster changed at the end returns 1, otherwise returns 0.
 int atribuir_clusters() {
 
-	#pragma omp reduced parallel for schedule(static)
+	#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < N; i++){
 		int cluster_mais_proximo = 0;
 		point cent = clusters[0].centroide, p = points[i];
@@ -86,7 +86,12 @@ int atribuir_clusters() {
 				menor_distancia = distancia;
 			}			
 		}
-		adicionar_ponto_cluster(cluster_mais_proximo,p);
+
+		#pragma omp critical
+		{
+			adicionar_ponto_cluster(cluster_mais_proximo,p);
+		}
+		
 	}
 
 
