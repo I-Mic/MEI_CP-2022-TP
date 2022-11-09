@@ -14,8 +14,10 @@ typedef struct cluster {
 
 int N;
 int K;
+int T;
 struct point* points;
 struct cluster *clusters;
+struct cluster *thread_clusters;
 struct point *centroides_antigos;
 
 //Calculates the centroide of a cluster
@@ -58,6 +60,10 @@ void reset_clusters(){
 	for (int i = 0; i < K; i++){
 		centroides_antigos[i] = clusters[i].centroide; 
 		clusters[i].used = 0;
+		for (int j = 0; j < T; j++)
+		{
+			thread_clusters[i * T + j].used = 0;
+		}
 	}
 }
 
@@ -66,12 +72,24 @@ void adicionar_ponto_cluster(int k, point p) {
 	clusters[k].points[clusters[k].used++] = p;
 }
 
+void adicionar_ponto_cluster_thread(int t,int k, point p) {
+	thread_clusters[k * T + t].points[thread_clusters[k * T +t].used++] = p;
+}
+
+void giveToCluster(int t){
+	for (int i = 0; i< K; i++){
+		for (int j = 0; j < thread_clusters[i * T + t].used; j++){
+			adicionar_ponto_cluster(i,thread_clusters[i * T + t].points[j]);
+		}
+	}
+	
+}
 
 //Function that designates a point to the closest cluster with paralelism
 //If any cluster changed at the end returns 1, otherwise returns 0.
 int atribuir_clusters() {
 
-	#pragma omp parallel for schedule(dynamic)
+	#pragma omp parallel for 
 	for (int i = 0; i < N; i++){
 		int cluster_mais_proximo = 0;
 		point cent = clusters[0].centroide, p = points[i];
@@ -81,22 +99,23 @@ int atribuir_clusters() {
 		for (int j = 1; j < K; j++){
 			float distancia = distancia_euclidiana(p,clusters[j].centroide);
 
-			if(distancia < menor_distancia){
-				cluster_mais_proximo = j;
-				menor_distancia = distancia;
-			}			
+				if(distancia < menor_distancia){
+					cluster_mais_proximo = j;
+					menor_distancia = distancia;
+				}		
 		}
 
-		#pragma omp critical
-		{
-			adicionar_ponto_cluster(cluster_mais_proximo,p);
-		}
+		int threadId = omp_get_thread_num();
+		adicionar_ponto_cluster_thread(threadId,cluster_mais_proximo,p);
 		
 	}
 
+	//#pragma omp parallel for schedule(dynamic,T)
+	for (int i = 0; i < T;i++){
+		giveToCluster(i);
+	}
 
 	#pragma omp parallel for
-	//Added paralelism
 	for (int k = 0; k < K; k++){
 		clusters[k].centroide = calcular_centroide(k);
 	}
@@ -109,6 +128,7 @@ void inicializa() {
 	points = (point*) malloc(N * sizeof(struct point));
 	clusters = (cluster*) malloc(K * sizeof(struct cluster));
 	centroides_antigos = (point*) malloc(K * sizeof(struct point));
+	thread_clusters = (cluster*) malloc((K * T) * sizeof(struct cluster));
 	
 	srand(10);
 	for(int i = 0; i < N; i++) {
@@ -121,6 +141,10 @@ void inicializa() {
 		clusters[i].centroide.y = points[i].y;
 		clusters[i].used = 0;
 		clusters[i].points = (struct point*) malloc(N * sizeof(struct point));
+		for (int j = 0; j < T;j++){
+			thread_clusters[i * T + j].used = 0;
+			thread_clusters[i * T + j].points = (struct point*) malloc(N * sizeof(struct point));
+		} 
 	}
 }
 
@@ -154,7 +178,8 @@ int main(int argc, char *argv[]){
 	if(argc == 4){
 		thread = atoi(argv[3]);
 	}
-
+	T = thread;
+	//thread_clusters = (cluster*) malloc(K * thread * sizeof(struct cluster));
 	omp_set_num_threads(thread);
 
 	k_means_lloyd_algorithm();
