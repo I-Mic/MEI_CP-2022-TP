@@ -107,6 +107,7 @@ int atribuir_clusters() {
 				}		
 		}
 
+		//Adds the point to the correct thread_cluster
 		int threadId = omp_get_thread_num();
 		adicionar_ponto_cluster_thread(threadId,cluster_mais_proximo,p);
 		
@@ -183,6 +184,7 @@ int main(int argc, char *argv[]){
 	}
 	else{
 		omp_set_num_threads(T);
+		//So it creates at least one thread_cluster array
 		T = 1;
 	}
 
