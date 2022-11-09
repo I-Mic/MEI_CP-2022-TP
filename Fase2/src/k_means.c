@@ -72,10 +72,12 @@ void adicionar_ponto_cluster(int k, point p) {
 	clusters[k].points[clusters[k].used++] = p;
 }
 
+//Function that adds a point to the cluster of certain thread
 void adicionar_ponto_cluster_thread(int t,int k, point p) {
 	thread_clusters[k * T + t].points[thread_clusters[k * T +t].used++] = p;
 }
 
+//Function that gives points of a thread_cluster to the correct cluster
 void giveToCluster(int t){
 	for (int i = 0; i< K; i++){
 		for (int j = 0; j < thread_clusters[i * T + t].used; j++){
@@ -110,8 +112,7 @@ int atribuir_clusters() {
 		
 	}
 
-	//#pragma omp parallel for schedule(dynamic,T)
-	for (int i = 0; i < T;i++){
+	for (int i = 0; i < T; i++){
 		giveToCluster(i);
 	}
 
@@ -141,10 +142,12 @@ void inicializa() {
 		clusters[i].centroide.y = points[i].y;
 		clusters[i].used = 0;
 		clusters[i].points = (struct point*) malloc(N * sizeof(struct point));
+
+		#pragma omp parallel for schedule(dynamic,T)
 		for (int j = 0; j < T;j++){
 			thread_clusters[i * T + j].used = 0;
 			thread_clusters[i * T + j].points = (struct point*) malloc(N * sizeof(struct point));
-		} 
+		}	 
 	}
 }
 
@@ -173,14 +176,15 @@ void k_means_lloyd_algorithm() {
 int main(int argc, char *argv[]){
 	N = atoi(argv[1]);
 	K = atoi(argv[2]);
-	int thread = 0;
-
+	T = 1;
 	if(argc == 4){
-		thread = atoi(argv[3]);
+		T = atoi(argv[3]);
+		omp_set_num_threads(T);
 	}
-	T = thread;
-	//thread_clusters = (cluster*) malloc(K * thread * sizeof(struct cluster));
-	omp_set_num_threads(thread);
+	else{
+		omp_set_num_threads(T);
+		T = 1;
+	}
 
 	k_means_lloyd_algorithm();
 	return 0;
