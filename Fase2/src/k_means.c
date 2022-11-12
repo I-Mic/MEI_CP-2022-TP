@@ -1,6 +1,5 @@
 #include "../include/utils.h"
 
-
 typedef struct point{
 	float x;
 	float y;
@@ -12,18 +11,20 @@ typedef struct cluster {
 	int used; //number of elements in the cluster
 } cluster;
 
-//Nr of total Points generated
-int N;
-//Nr of total clusters
-int K;
-//Nr of total threads
-int T;
-struct point* points;
-//The global array of clusters
-struct cluster *clusters;
-//The local-thread array of clusters
-struct cluster *thread_clusters;
-struct point *centroides_antigos;
+//Struct of global cluster doesnt require to have the array of points
+typedef struct global_cluster {
+	point centroide;
+	int used; //number of elements in the cluster
+} global_cluster;
+
+int N;								//Nr of total Points generated
+int K;								//Nr of total clusters
+int T;								//Nr of total threads
+
+struct point* points;				//Array of generated points
+struct global_cluster *clusters;	//The global array of clusters
+struct cluster *thread_clusters;	//The local-thread array of clusters
+struct point *centroides_antigos;	//Previous centroids 
 
 
 //Calculates the centroide of a cluster
@@ -123,7 +124,7 @@ int atribuir_clusters() {
 //Creates N Random points and assigns the first K points as centroids of each cluster
 void inicializa() {
 	points = (point*) malloc(N * sizeof(point));
-	clusters = (cluster*) malloc(K * sizeof(cluster));
+	clusters = (global_cluster*) malloc(K * sizeof(global_cluster));
 	centroides_antigos = (point*) malloc(K * sizeof(point));
 	thread_clusters = (cluster*) malloc((K * T) * sizeof(cluster));
 	
@@ -141,7 +142,7 @@ void inicializa() {
 
 		for (int j = 0; j < T;j++){
 			thread_clusters[j * K + i].used = 0;
-			thread_clusters[j * K + i].points = (point*) malloc(N * sizeof(point));
+			thread_clusters[j * K + i].points = (point*) malloc(((N / T) + T) * sizeof(point));
 		}	 
 	}
 }
