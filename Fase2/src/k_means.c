@@ -37,9 +37,9 @@ void calcular_centroide(){
 		int total = 0;
 
 		for (int t = 0; t < T;t++){
-			int pos = k * T + t;
+			int pos = t * K + k;
 			total += thread_clusters[pos].used;
-			//#pragma omp parallel for
+
 			for (int i = 0; i < thread_clusters[pos].used; i++){
 				sum_x += thread_clusters[pos].points[i].x;
 				sum_y += thread_clusters[pos].points[i].y;
@@ -74,18 +74,18 @@ int comparar_centroides(){
 //Added paralelism for better performance
 void reset_clusters(){
 	#pragma omp parallel for
-	for (int i = 0; i < K; i++){
-		centroides_antigos[i] = clusters[i].centroide; 
-		for (int j = 0; j < T; j++)
+	for (int k = 0; k < K; k++){
+		centroides_antigos[k] = clusters[k].centroide; 
+		for (int t = 0; t < T; t++)
 		{
-			thread_clusters[i * T + j].used = 0;
+			thread_clusters[t * K + k].used = 0;
 		}
 	}
 }
 
 //Function that adds a point to the cluster of certain thread
 void adicionar_ponto_cluster_thread(int t,int k, point p) {
-	thread_clusters[k * T + t].points[thread_clusters[k * T +t].used++] = p;
+	thread_clusters[t * K + k].points[thread_clusters[t * K + k].used++] = p;
 }
 
 
@@ -140,8 +140,8 @@ void inicializa() {
 		clusters[i].used = 0;
 
 		for (int j = 0; j < T;j++){
-			thread_clusters[i * T + j].used = 0;
-			thread_clusters[i * T + j].points = (point*) malloc(N * sizeof(point));
+			thread_clusters[j * K + i].used = 0;
+			thread_clusters[j * K + i].points = (point*) malloc(N * sizeof(point));
 		}	 
 	}
 }
@@ -180,10 +180,11 @@ int main(int argc, char *argv[]){
 	N = atoi(argv[1]);
 	K = atoi(argv[2]);
 	T = 1;
-	if(argc == 4){
+	if(argc >= 4){
 		T = atoi(argv[3]);
 	}
 
+	//The best result will mostly be nr threads = 2 * nr clusters
 	omp_set_num_threads(T);
 
 	k_means_lloyd_algorithm();
