@@ -142,7 +142,7 @@ void inicializa() {
 
 		for (int j = 0; j < T;j++){
 			thread_clusters[j * K + i].used = 0;
-			thread_clusters[j * K + i].points = (point*) malloc(((N / T) + T) * sizeof(point));
+			thread_clusters[j * K + i].points = (point*) malloc(((N / T) + 1) * sizeof(point));
 		}	 
 	}
 }
