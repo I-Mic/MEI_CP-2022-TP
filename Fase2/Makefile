@@ -3,7 +3,7 @@ BIN = bin/
 SRC = src/
 INCLUDES = include/
 EXEC = k_means
-THREADS = 2
+THREADS = 8
 
 #CFLAGS = -funroll-loops -O2
 CFLAGS = -ftree-vectorize -msse4 -O2 -fopenmp
