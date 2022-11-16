@@ -4,7 +4,6 @@ SRC = src/
 INCLUDES = include/
 EXEC = k_means
 THREADS = 2
-CP_CLUSTERS = 4
 
 #CFLAGS = -funroll-loops -O2
 CFLAGS = -ftree-vectorize -msse4 -O2 -fopenmp

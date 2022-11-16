@@ -31,8 +31,7 @@ struct point *centroides_antigos;	//Previous centroids
 void calcular_centroide(){
 
 	#pragma omp parallel for
-	for (int k = 0; k < K; k++)
-	{
+	for (int k = 0; k < K; k++) {
 		float sum_x = 0;
 		float sum_y = 0;
 		int total = 0;
@@ -77,8 +76,7 @@ void reset_clusters(){
 	#pragma omp parallel for
 	for (int k = 0; k < K; k++){
 		centroides_antigos[k] = clusters[k].centroide; 
-		for (int t = 0; t < T; t++)
-		{
+		for (int t = 0; t < T; t++){
 			thread_clusters[t * K + k].used = 0;
 		}
 	}
@@ -88,7 +86,6 @@ void reset_clusters(){
 void adicionar_ponto_cluster_thread(int t,int k, point p) {
 	thread_clusters[t * K + k].points[thread_clusters[t * K + k].used++] = p;
 }
-
 
 //Function that designates a point to the closest cluster with paralelism
 //If any cluster changed at the end returns 1, otherwise returns 0.
@@ -132,9 +129,9 @@ void inicializa() {
 	for(int i = 0; i < N; i++) {
 		points[i].x = (float) rand() / RAND_MAX;
 		points[i].y = (float) rand() / RAND_MAX;
-		}
+	}
 
-	#pragma omp parallel for 
+	#pragma omp parallel for
 	for(int i = 0; i < K; i++) {
 		clusters[i].centroide.x = points[i].x;
 		clusters[i].centroide.y = points[i].y;
@@ -181,9 +178,8 @@ int main(int argc, char *argv[]){
 	N = atoi(argv[1]);
 	K = atoi(argv[2]);
 	T = 1;
-	if(argc >= 4){
-		T = atoi(argv[3]);
-	}
+
+	if(argc >= 4) T = atoi(argv[3]);
 
 	//The best result will mostly be nr threads = 2 * nr clusters
 	omp_set_num_threads(T);
