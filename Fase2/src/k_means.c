@@ -181,7 +181,7 @@ int main(int argc, char *argv[]){
 
 	if(argc >= 4) T = atoi(argv[3]);
 
-	//The best result will mostly be nr threads = 2 * nr clusters
+	
 	omp_set_num_threads(T);
 
 	k_means_lloyd_algorithm();
