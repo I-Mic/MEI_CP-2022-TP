@@ -179,8 +179,12 @@ int main(int argc, char *argv[]){
 	K = atoi(argv[2]);
 	T = 1;
 
-	if(argc >= 4) T = atoi(argv[3]);
+	if (argc < 3) {
+		printf("Not enough arguments!");
+		return -1;
+	}
 
+	if(argc >= 4) T = atoi(argv[3]);
 	
 	omp_set_num_threads(T);
 
