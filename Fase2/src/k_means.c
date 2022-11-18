@@ -175,14 +175,15 @@ void freeMemory(){
 }
 
 int main(int argc, char *argv[]){
-	N = atoi(argv[1]);
-	K = atoi(argv[2]);
-	T = 1;
 
 	if (argc < 3) {
 		printf("Not enough arguments!");
 		return -1;
 	}
+
+	N = atoi(argv[1]);
+	K = atoi(argv[2]);
+	T = 1;
 
 	if(argc >= 4) T = atoi(argv[3]);
 	
