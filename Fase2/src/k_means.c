@@ -5,17 +5,26 @@ typedef struct point{
 	float y;
 } point;
 
+typedef struct cluster {
+	point centroide;
+	struct point *points;
+	int used; //number of elements in the cluster
+} cluster;
+
+//Struct of global cluster doesnt require to have the array of points
+typedef struct global_cluster {
+	point centroide;
+	int used; //number of elements in the cluster
+} global_cluster;
 
 int N;								//Nr of total Points generated
 int K;								//Nr of total clusters
 int T;								//Nr of total threads
 
 struct point* points;				//Array of generated points
-struct point *centroides_antigos;	//Previous centroids
-int* cluster_size;
-float* sum_cluster_x;
-float* sum_cluster_y;
-struct point* cluster_centroid;
+struct global_cluster *clusters;	//The global array of clusters
+struct cluster *thread_clusters;	//The local-thread array of clusters
+struct point *centroides_antigos;	//Previous centroids 
 
 
 //Calculates the centroide of a cluster
@@ -23,9 +32,23 @@ void calcular_centroide(){
 
 	#pragma omp parallel for
 	for (int k = 0; k < K; k++) {
+		float sum_x = 0;
+		float sum_y = 0;
+		int total = 0;
+
+		for (int t = 0; t < T;t++){
+			int pos = t * K + k;
+			total += thread_clusters[pos].used;
+
+			for (int i = 0; i < thread_clusters[pos].used; i++){
+				sum_x += thread_clusters[pos].points[i].x;
+				sum_y += thread_clusters[pos].points[i].y;
+			}
+		}
 		//ads centroid and total points nr to global cluster
-		cluster_centroid[k].x = sum_cluster_x[k]/cluster_size[k];
-		cluster_centroid[k].y = sum_cluster_y[k]/cluster_size[k];
+		clusters[k].used = total;
+		clusters[k].centroide.x = sum_x/total;
+		clusters[k].centroide.y = sum_y/total;
 	}
 	
 }
@@ -42,7 +65,7 @@ float distancia_euclidiana(point a, point b){
 //If it has changed returns 0 otherwise returns 1
 int comparar_centroides(){
 	for(int i = 0; i < K; i++){
-		if(cluster_centroid[i].x != centroides_antigos[i].x || cluster_centroid[i].y != centroides_antigos[i].y) return 0;
+		if(clusters[i].centroide.x != centroides_antigos[i].x || clusters[i].centroide.y != centroides_antigos[i].y) return 0;
 	}
 	return 1;
 }
@@ -52,50 +75,55 @@ int comparar_centroides(){
 void reset_clusters(){
 	#pragma omp parallel for
 	for (int k = 0; k < K; k++){
-		centroides_antigos[k] = cluster_centroid[k]; 
-		sum_cluster_x[k] = 0;
-		sum_cluster_y[k] = 0;
-		cluster_size[k] = 0;
-
+		centroides_antigos[k] = clusters[k].centroide; 
+		for (int t = 0; t < T; t++){
+			thread_clusters[t * K + k].used = 0;
+		}
 	}
 }
 
+//Function that adds a point to the cluster of certain thread
+void adicionar_ponto_cluster_thread(int t,int k, point p) {
+	thread_clusters[t * K + k].points[thread_clusters[t * K + k].used++] = p;
+}
 
 //Function that designates a point to the closest cluster with paralelism
 //If any cluster changed at the end returns 1, otherwise returns 0.
 int atribuir_clusters() {
 
-	#pragma omp parallel for reduction(+:cluster_size[:K]) reduction (+:sum_cluster_x[:K]) reduction(+:sum_cluster_y[:K])
+	#pragma omp parallel for 
 	for (int i = 0; i < N; i++){
 		int cluster_mais_proximo = 0;
-		point cent = cluster_centroid[0], p = points[i];
+		point cent = clusters[0].centroide, p = points[i];
+
 		float menor_distancia = distancia_euclidiana(p,cent);
 
 		for (int j = 1; j < K; j++){
-			float distancia = distancia_euclidiana(p,cluster_centroid[j]);
+			float distancia = distancia_euclidiana(p,clusters[j].centroide);
 
 				if(distancia < menor_distancia){
 					cluster_mais_proximo = j;
 					menor_distancia = distancia;
 				}		
 		}
-		cluster_size[cluster_mais_proximo]++;
-		sum_cluster_x[cluster_mais_proximo] += p.x;
-		sum_cluster_y[cluster_mais_proximo] += p.y;	
+
+		//Adds the point to the correct thread_cluster
+		int threadId = omp_get_thread_num();
+		adicionar_ponto_cluster_thread(threadId,cluster_mais_proximo,p);
+		
 	}
 
 	calcular_centroide();
+
 	return comparar_centroides();
 }
 
 //Creates N Random points and assigns the first K points as centroids of each cluster
 void inicializa() {
 	points = (point*) malloc(N * sizeof(point));
-	cluster_size = (int*) malloc(K * sizeof(int));
-	sum_cluster_x = (float*) malloc(K * sizeof(float));
-	sum_cluster_y = (float*) malloc(K * sizeof(float));
-	cluster_centroid = (point*) malloc(K * sizeof(point));
+	clusters = (global_cluster*) malloc(K * sizeof(global_cluster));
 	centroides_antigos = (point*) malloc(K * sizeof(point));
+	thread_clusters = (cluster*) malloc((K * T) * sizeof(cluster));
 	
 	srand(10);
 	for(int i = 0; i < N; i++) {
@@ -105,11 +133,14 @@ void inicializa() {
 
 	#pragma omp parallel for
 	for(int i = 0; i < K; i++) {
-		cluster_centroid[i].x = points[i].x;
-		cluster_centroid[i].y = points[i].y;
-		sum_cluster_x[i] = 0;
-		sum_cluster_y[i] = 0;	
-		cluster_size[i] = 0; 
+		clusters[i].centroide.x = points[i].x;
+		clusters[i].centroide.y = points[i].y;
+		clusters[i].used = 0;
+
+		for (int j = 0; j < T;j++){
+			thread_clusters[j * K + i].used = 0;
+			thread_clusters[j * K + i].points = (point*) malloc(((N / T) + 1) * sizeof(point));
+		}	 
 	}
 }
 
@@ -130,19 +161,17 @@ void k_means_lloyd_algorithm() {
 	printf("N = %d, K = %d\n",N,K);
 
 	for(int k = 0; k < K; k++){
-		printf("Center: (%0.3f, %0.3f) : Size: %d\n",cluster_centroid[k].x,cluster_centroid[k].y,cluster_size[k]);
+		printf("Center: (%0.3f, %0.3f) : Size: %d\n",clusters[k].centroide.x,clusters[k].centroide.y,clusters[k].used);
 	}
 	printf("Iterations:%d\n",iteracoes);
 }
 
 //Clears memory allocated for the arrays
 void freeMemory(){
+		free(thread_clusters);
 		free(points);
+		free(clusters);
 		free(centroides_antigos);
-		free(cluster_size);
-		free(sum_cluster_x);
-		free(sum_cluster_y);
-		free(cluster_centroid);
 }
 
 int main(int argc, char *argv[]){
