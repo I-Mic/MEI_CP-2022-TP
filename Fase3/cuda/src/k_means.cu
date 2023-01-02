@@ -72,31 +72,27 @@ __global__
 void atribuir_clustersKernel(int k,int n, point *points, int *cluster_size, float *sum_cluster_x, float *sum_cluster_y, point *cluster_centroid, point *centroides_antigos) {
 	int threadID = (threadIdx.x + blockIdx.x * blockDim.x) + (threadIdx.y + blockIdx.y * blockDim.y) * blockDim.x * gridDim.x;
 
-	if(threadID >= n) return;
-	/*
-	//Init Shared arrays
-	__shared__ float d_sum_cluster_x[NUM_THREADS_PER_BLOCK];
-	__shared__ float d_sum_cluster_y[NUM_THREADS_PER_BLOCK];
-	__shared__ int d_cluster[NUM_THREADS_PER_BLOCK];
-	*/
-
-	int cluster_mais_proximo = 0;
-	point cent = cluster_centroid[0], p = points[threadID];
-	float menor_distancia = distancia_euclidianaKernel(p,cent);
+	if(threadID < n) {
+		int cluster_mais_proximo = 0;
+		point cent = cluster_centroid[0], p = points[threadID];
+		float menor_distancia = distancia_euclidianaKernel(p,cent);
 
 
-	for (int j = 1; j < k; j++){
-		float distancia = distancia_euclidianaKernel(p,cluster_centroid[j]);
+		for (int j = 1; j < k; j++){
+			float distancia = distancia_euclidianaKernel(p,cluster_centroid[j]);
 
-			if(distancia < menor_distancia){
-				cluster_mais_proximo = j;
-				menor_distancia = distancia;
-			}		
+				if(distancia < menor_distancia){
+					cluster_mais_proximo = j;
+					menor_distancia = distancia;
+				}		
+		}
+
+		
+		atomicAdd(&sum_cluster_x[cluster_mais_proximo],p.x);
+		atomicAdd(&sum_cluster_y[cluster_mais_proximo],p.y);
+		atomicAdd(&cluster_size[cluster_mais_proximo],1);
 	}
-
-	atomicAdd(&sum_cluster_x[cluster_mais_proximo],p.x);
-	atomicAdd(&sum_cluster_y[cluster_mais_proximo],p.y);
-	atomicAdd(&cluster_size[cluster_mais_proximo],1);
+	
 	
 }
 
