@@ -70,16 +70,23 @@ void reset_clustersKernel(int K,int *cluster_size, float *sum_cluster_x, float *
 //Function that designates a point to the closest cluster with cuda
 __global__
 void atribuir_clustersKernel(int k,int n, point *points, int *cluster_size, float *sum_cluster_x, float *sum_cluster_y, point *cluster_centroid, point *centroides_antigos) {
-	int threadID = (threadIdx.x + blockIdx.x * blockDim.x) + (threadIdx.y + blockIdx.y * blockDim.y) * blockDim.x * gridDim.x;
+	int threadID = (threadIdx.x + blockIdx.x * blockDim.x);
+
+	extern __shared__ point scentroid[];
+
+	if(threadIdx.x == 0){
+		for(int i = 0 ; i<k;i++)
+			scentroid[i] = cluster_centroid[i];
+	}
 
 	if(threadID < n) {
 		int cluster_mais_proximo = 0;
-		point cent = cluster_centroid[0], p = points[threadID];
+		point cent = scentroid[0], p = points[threadID];
 		float menor_distancia = distancia_euclidianaKernel(p,cent);
 
 
 		for (int j = 1; j < k; j++){
-			float distancia = distancia_euclidianaKernel(p,cluster_centroid[j]);
+			float distancia = distancia_euclidianaKernel(p,scentroid[j]);
 
 				if(distancia < menor_distancia){
 					cluster_mais_proximo = j;
@@ -92,6 +99,7 @@ void atribuir_clustersKernel(int k,int n, point *points, int *cluster_size, floa
 		atomicAdd(&sum_cluster_y[cluster_mais_proximo],p.y);
 		atomicAdd(&cluster_size[cluster_mais_proximo],1);
 	}
+
 	
 	
 }
@@ -181,8 +189,9 @@ void launchKernel (){
 	int ended = 0;
 
 	startKernelTime ();
+	size_t blocksize = K;
 	while(!ended && iteracoes < 20) {
-		atribuir_clustersKernel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(K,N,pointsa,cluster_sizea,sum_cluster_xa,sum_cluster_ya,cluster_centroida,centroides_antigosa);
+		atribuir_clustersKernel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK,sizeof(point)*blocksize>>>(K,N,pointsa,cluster_sizea,sum_cluster_xa,sum_cluster_ya,cluster_centroida,centroides_antigosa);
 		iteracoes++;
 		if(iteracoes < 20)
 		reset_IterationKernel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(K,cluster_sizea,sum_cluster_xa, sum_cluster_ya, cluster_centroida, centroides_antigosa, ended);
