@@ -3,6 +3,7 @@
 
 #define NUM_THREADS_PER_BLOCK 256
 
+
 using namespace std;
 
 typedef struct point{
@@ -42,33 +43,50 @@ float distancia_euclidianaKernel(point a, point b){
 	return ((a.x - b.x) * (a.x - b.x)) + ((a.y - b.y) * (a.y - b.y));
 }
 
+
 //Compares the old centroid with the new one to check if it has changed
-//If it has changed sets result to 0 otherwise sets to 1
-__global__ 
-void comparar_centroidesKernel(int K, point *cluster_centroid, point *centroides_antigos, int *result) {
-
-    result[0] = 0;
-
-    for(int i = 0; i < K; i++){
-        if(cluster_centroid[i].x != centroides_antigos[i].x || cluster_centroid[i].y != centroides_antigos[i].y) {
-            result[0] = 1;
-        }
-    }
+//If it has changed returns 0 otherwise returns 1
+__device__
+int comparar_centroidesKernel(int K,point *cluster_centroid, point *centroides_antigos){
+	for(int i = 0; i < K; i++){
+		if(cluster_centroid[i].x != centroides_antigos[i].x || cluster_centroid[i].y != centroides_antigos[i].y) return 0;
+	}
+	return 1;
 }
+
+//Resets the clusters, saving the current centroids, for the next iteration
+__device__
+void reset_clustersKernel(int K,int *cluster_size, float *sum_cluster_x, float *sum_cluster_y,point *cluster_centroid, point *centroides_antigos){
+	for (int k = 0; k < K; k++){
+		centroides_antigos[k] = cluster_centroid[k]; 
+		sum_cluster_x[k] = 0;
+		sum_cluster_y[k] = 0;
+		cluster_size[k] = 0;
+
+	}
+}
+
 
 //Function that designates a point to the closest cluster with cuda
 __global__
 void atribuir_clustersKernel(int k,int n, point *points, int *cluster_size, float *sum_cluster_x, float *sum_cluster_y, point *cluster_centroid, point *centroides_antigos) {
-	int threadID = (threadIdx.x + blockIdx.x * blockDim.x) + (threadIdx.y + blockIdx.y * blockDim.y) * blockDim.x * gridDim.x;
+	int threadID = (threadIdx.x + blockIdx.x * blockDim.x);
+
+	extern __shared__ point scentroid[];
+
+	if(threadIdx.x == 0){
+		for(int i = 0 ; i<k;i++)
+			scentroid[i] = cluster_centroid[i];
+	}
 
 	if(threadID < n) {
 		int cluster_mais_proximo = 0;
-		point cent = cluster_centroid[0], p = points[threadID];
+		point cent = scentroid[0], p = points[threadID];
 		float menor_distancia = distancia_euclidianaKernel(p,cent);
 
 
 		for (int j = 1; j < k; j++){
-			float distancia = distancia_euclidianaKernel(p,cluster_centroid[j]);
+			float distancia = distancia_euclidianaKernel(p,scentroid[j]);
 
 				if(distancia < menor_distancia){
 					cluster_mais_proximo = j;
@@ -81,8 +99,18 @@ void atribuir_clustersKernel(int k,int n, point *points, int *cluster_size, floa
 		atomicAdd(&sum_cluster_y[cluster_mais_proximo],p.y);
 		atomicAdd(&cluster_size[cluster_mais_proximo],1);
 	}
+
 	
 	
+}
+
+__global__
+void reset_IterationKernel(int k, int *cluster_size, float *sum_cluster_x, float *sum_cluster_y, point *cluster_centroid, point *centroides_antigos, int ended){
+	if(threadIdx.x == 0 && blockIdx.x == 0){
+		calcular_centroideKernel(k, cluster_centroid, sum_cluster_x, sum_cluster_y, cluster_size);
+		ended = comparar_centroidesKernel(k,cluster_centroid, centroides_antigos);
+		reset_clustersKernel(k,cluster_size, sum_cluster_x, sum_cluster_y,cluster_centroid, centroides_antigos);
+	}
 }
 
 //Creates N Random points and assigns the first K points as centroids of each cluster
@@ -126,93 +154,74 @@ void freeMemory(){
 
 void launchKernel (){
 	//pointers to the device memory
-    point *points_device; 
-    int *cluster_size_device;
-    float *sum_cluster_x_device, *sum_cluster_y_device;
-    point *cluster_centroid_device,*centroides_antigos_device;
-	int *ended_device;
+	point *pointsa; 
+	int *cluster_sizea;
+	float *sum_cluster_xa, *sum_cluster_ya;
+	point *cluster_centroida,*centroides_antigosa;
 
-    // declare variable with size of the array in bytes
-    int points_bytes = N * sizeof(point);
-    int cluster_size_bytes = K * sizeof(int);
-    int sum_bytes = K * sizeof(float);
-    int cluster_centroid_bytes = K * sizeof(point);
+	// declare variable with size of the array in bytes
+	int points_Bytes = N * sizeof(point);
+	int cluster_size_Bytes = K * sizeof(int);
+	int sum_Bytes = K * sizeof(float);
+	int cluster_centroid_Bytes = K * sizeof(point);
 
 
-    // allocate the memory on the device
-    cudaMalloc((void**)&points_device, points_bytes);
-    cudaMalloc((void**)&cluster_size_device, cluster_size_bytes);
-    cudaMalloc((void**)&sum_cluster_x_device, sum_bytes);
-    cudaMalloc((void**)&sum_cluster_y_device, sum_bytes);
-    cudaMalloc((void**)&cluster_centroid_device, cluster_centroid_bytes);
-    cudaMalloc((void**)&centroides_antigos_device, cluster_centroid_bytes);
-	cudaMalloc((void**)&ended_device, sizeof(int));
-    checkCUDAError("mem allocation");
+	// allocate the memory on the device
+	cudaMalloc((void**)&pointsa, points_Bytes);
+	cudaMalloc((void**)&cluster_sizea, cluster_size_Bytes);
+	cudaMalloc((void**)&sum_cluster_xa, sum_Bytes);
+	cudaMalloc((void**)&sum_cluster_ya, sum_Bytes);
+	cudaMalloc((void**)&cluster_centroida, cluster_centroid_Bytes);
+	cudaMalloc((void**)&centroides_antigosa, cluster_centroid_Bytes);
+	checkCUDAError("mem allocation");
 
-    // Initialize the device memory for cluster_size_device, sum_cluster_x_device, sum_cluster_y_device, centroides_antigos_device to 0 asynchronously
-    cudaMemsetAsync(cluster_size_device, 0, cluster_size_bytes, cudaStreamDefault);
-    cudaMemsetAsync(sum_cluster_x_device, 0, sum_bytes, cudaStreamDefault);
-    cudaMemsetAsync(sum_cluster_y_device, 0, sum_bytes, cudaStreamDefault);
-    cudaMemsetAsync(centroides_antigos_device, 0, cluster_centroid_bytes, cudaStreamDefault);
+	//copy inputs to the device
+	cudaMemcpy(pointsa, points, points_Bytes, cudaMemcpyHostToDevice);
+	cudaMemcpy(cluster_sizea, cluster_size, cluster_size_Bytes, cudaMemcpyHostToDevice);
+	cudaMemcpy(sum_cluster_xa, sum_cluster_x, sum_Bytes, cudaMemcpyHostToDevice);
+	cudaMemcpy(sum_cluster_ya, sum_cluster_y, sum_Bytes, cudaMemcpyHostToDevice);
+	cudaMemcpy(cluster_centroida, cluster_centroid, cluster_centroid_Bytes, cudaMemcpyHostToDevice);
+	cudaMemcpy(centroides_antigosa, centroides_antigos, cluster_centroid_Bytes, cudaMemcpyHostToDevice);
+	checkCUDAError("memcpy h->d");
 
-    //copy inputs to the device asynchronously
-    cudaMemcpyAsync(points_device, points, points_bytes, cudaMemcpyHostToDevice, cudaStreamDefault);
-    cudaMemcpyAsync(cluster_centroid_device, cluster_centroid, cluster_centroid_bytes, cudaMemcpyHostToDevice, cudaStreamDefault);
+	//lauch the Kernel
+	int iteracoes = 0;
+	int ended = 0;
 
-    // Launch the kernel
-    int iterations = 0;
-    int ended = 0;
+	startKernelTime ();
+	size_t blocksize = K;
+	while(!ended && iteracoes < 20) {
+		atribuir_clustersKernel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK,sizeof(point)*blocksize>>>(K,N,pointsa,cluster_sizea,sum_cluster_xa,sum_cluster_ya,cluster_centroida,centroides_antigosa);
+		iteracoes++;
+		if(iteracoes < 20)
+		reset_IterationKernel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(K,cluster_sizea,sum_cluster_xa, sum_cluster_ya, cluster_centroida, centroides_antigosa, ended);
+	}
+	stopKernelTime ();
+	checkCUDAError("kernel invocation");
+	
 
-    startKernelTime();
-	while (!ended && iterations < 20) {
-        atribuir_clustersKernel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK, 0, cudaStreamDefault>>>(K, N, points_device, cluster_size_device, sum_cluster_x_device, sum_cluster_y_device, cluster_centroid_device, centroides_antigos_device);
-        iterations++;
-        if (iterations < 20)
-		comparar_centroidesKernel<<<NUM_BLOCKS, NUM_THREADS_PER_BLOCK>>>(K, cluster_centroid_device, centroides_antigos_device, ended_device);
-		// Copy the result from device memory to host memory
-    	cudaMemcpy(&ended, ended_device, sizeof(int), cudaMemcpyDeviceToHost);
-    }
+	//copy the required output to the host
+	cudaMemcpy(cluster_centroid, cluster_centroida, cluster_centroid_Bytes, cudaMemcpyDeviceToHost);
+	cudaMemcpy(cluster_size, cluster_sizea, cluster_size_Bytes, cudaMemcpyDeviceToHost);
+	checkCUDAError("memcpy h->d");
 
-    // Synchronize the streams to ensure all the kernel launches have completed
-    cudaDeviceSynchronize();
+	//free the device memory
+	cudaFree(pointsa);
+	cudaFree(cluster_sizea);
+	cudaFree(sum_cluster_xa);
+	cudaFree(sum_cluster_ya);
+	cudaFree(cluster_centroida);
+	cudaFree(centroides_antigosa);
+	checkCUDAError("mem free");
 
-    // Stop the timer
-    stopKernelTime();
+	//print the output
+	printf("N = %d, K = %d\n",N,K);
 
-    // Copy the required output to the host asynchronously
-    cudaMemcpyAsync(cluster_centroid, cluster_centroid_device, cluster_centroid_bytes, cudaMemcpyDeviceToHost, cudaStreamDefault);
-    cudaMemcpyAsync(cluster_size, cluster_size_device, cluster_size_bytes, cudaMemcpyDeviceToHost, cudaStreamDefault);
+	for(int k = 0; k < K; k++){
+		printf("Center: (%0.3f, %0.3f) : Size: %d\n",cluster_centroid[k].x,cluster_centroid[k].y,cluster_size[k]);
+	}
+	printf("Iterations:%d\n",iteracoes);
 
-    // Synchronize the streams to ensure the data has been transferred
-    cudaDeviceSynchronize();
-
-    // Free the device memory
-    cudaFree(points_device);
-    cudaFree(cluster_size_device);
-    cudaFree(sum_cluster_x_device);
-    cudaFree(sum_cluster_y_device);
-    cudaFree(cluster_centroid_device);
-    cudaFree(centroides_antigos_device);
-	cudaFree(ended_device);
-
-    // Free the host memory
-    cudaFreeHost(points);
-    cudaFreeHost(cluster_size);
-    cudaFreeHost(sum_cluster_x);
-    cudaFreeHost(sum_cluster_y);
-    cudaFreeHost(cluster_centroid);
-    cudaFreeHost(centroides_antigos);
-
-    // Reset the device
-    cudaDeviceReset();
-
-    // Print the output
-    printf("N = %d, K = %d\n", N, K);
-
-    for (int k = 0; k < K; k++) {
-    printf("Center: (%0.3f, %0.3f) : Size: %d\n", cluster_centroid[k].x, cluster_centroid[k].y, cluster_size[k]);
-    }
-    printf("Iterations: %d\n", iterations);
 }
 
 int main(int argc, char *argv[]){
