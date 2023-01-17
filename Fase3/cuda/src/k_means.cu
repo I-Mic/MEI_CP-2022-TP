@@ -79,6 +79,8 @@ void atribuir_clustersKernel(int k,int n, point *points, int *cluster_size, floa
 			scentroid[i] = cluster_centroid[i];
 	}
 
+	__syncthreads();
+
 	if(threadID < n) {
 		int cluster_mais_proximo = 0;
 		point cent = scentroid[0], p = points[threadID];
